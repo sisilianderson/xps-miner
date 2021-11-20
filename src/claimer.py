@@ -6,6 +6,7 @@ from selenium.webdriver.common.action_chains import ActionChains
 
 from database import Claim
 from utils import is_popup_window, switch_to_popup_wnd, switch_to_wnd, get_current_wnd
+from clicker import MockClicker
 
 
 class ClaimXPS:
@@ -15,29 +16,8 @@ class ClaimXPS:
         self.driver = driver
         self.db = db
 
-    def get_account_resources(self):
-        pass
-
-    def get_account_lands(self):
-        pass
-
-    def get_land_ph(self, land_name):
-        pass
-
-    def get_land_wait_time(self, land_name):
-        pass
-
-    def get_land_equipments(self, land_name):
-        pass
-
-    def get_land_fee(self, land_name):
-        pass
-
-    def claim_land(self, land_name):
-        pass
-
-    def get_wait_time(self):
-        return self.driver.find_element(by=By.XPATH, value="/html/body/div/div/div/div/div[1]/section/div/div/div[2]/div[2]/div").text
+    def claim_xps(self):
+        self.clicker = MockClicker(self.account)
 
     def claim_fwx(self, debug_mode=False):
         self.driver.get(self.config["game_path"])
@@ -73,14 +53,14 @@ class ClaimXPS:
             hours = int(time_to_wait.split(":")[0])
             minutes = int(time_to_wait.split(":")[1])
             seconds = int(time_to_wait.split(":")[2])
-            seconds_to_next_mine = hours*60*60+minutes*60+seconds
+            seconds_to_next_mine = hours * 60 * 60 + minutes * 60 + seconds
             logging.info(f"Seconds to next mine: {seconds_to_next_mine}")
 
             if seconds_to_next_mine == 0:
                 time.sleep(10)
 
                 button = self.driver.find_element(by=By.XPATH, value=
-                    "/html/body/div/div/div/div/div[1]/section/div/div/div[2]/div[3]/div[1]/button")
+                "/html/body/div/div/div/div/div[1]/section/div/div/div[2]/div[3]/div[1]/button")
                 actions = ActionChains(self.driver)
                 actions.move_to_element(button).perform()
                 button.click()
@@ -90,7 +70,7 @@ class ClaimXPS:
                     switch_to_popup_wnd(self.driver)
                     time.sleep(3)
                     self.driver.find_element(by=By.XPATH, value=
-                        '/html/body/div/div/section/div[2]/div/div[5]/button').click()
+                    '/html/body/div/div/section/div[2]/div/div[5]/button').click()
                     switch_to_wnd(self.driver, main_wnd)
                 time.sleep(3)
 
@@ -104,9 +84,10 @@ class ClaimXPS:
                 time.sleep(5)
                 new_gold, new_wood, new_food, new_enrg = self.get_resources()
                 if float(new_wood) > float(wood):
-                    self.db.add_claim(Claim(time.time(), float(new_wood)-float(wood), self.db.get_account(self.account).id))
+                    self.db.add_claim(
+                        Claim(time.time(), float(new_wood) - float(wood), self.db.get_account(self.account).id))
             elif seconds_to_next_mine <= 300:
                 time.sleep(60)
             else:
-                self.db.update_account(self.account, next_mining_time=(int(time.time())+seconds_to_next_mine))
+                self.db.update_account(self.account, next_mining_time=(int(time.time()) + seconds_to_next_mine))
                 break

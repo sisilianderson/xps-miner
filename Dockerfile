@@ -52,4 +52,4 @@ RUN pip3 install -r requirements.txt
 
 COPY src/ .
 
-CMD ["python3", "farmer.py", "--config", "cfg/config.json", "--accounts", "cfg/creds.json"]
+CMD ["python3", "miner.py", "--config", "cfg/config.json", "--accounts", "cfg/creds.json"]
