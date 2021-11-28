@@ -1,0 +1,10 @@
+FROM python:3.8-slim
+
+WORKDIR /opt/miner
+COPY requirements.txt .
+RUN pip3 install pytest requests exit
+
+COPY src/ .
+COPY tests/ .
+
+CMD ["python3", "-m", "pytest", "-qs", "test_storage.py"]

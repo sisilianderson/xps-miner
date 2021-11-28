@@ -1,3 +1,4 @@
+import logging
 import os
 
 from sqlalchemy import Column, Integer, String, ForeignKey, REAL
@@ -67,9 +68,9 @@ class Account(Base):
 class Land(Base):
     __tablename__ = 'lands'
     id = Column('id', Integer, primary_key=True)
-    name = Column('name', String, nullable=False)
-    rarity = Column('rarity', String, nullable=False)
-    lvl = Column('lvl', String, nullable=False)
+    name = Column('name', String)
+    rarity = Column('rarity', String)
+    lvl = Column('lvl', REAL)
     xps_ph = Column('xps_ph', REAL)
     bmtl_ph = Column('bmtl_ph', REAL)
     lsm_ph = Column('lsm_ph', REAL)
@@ -80,8 +81,8 @@ class Land(Base):
     equipment_2 = Column('equipment_2', String)
     equipment_3 = Column('equipment_3', String)
     equipment_4 = Column('equipment_4', String)
-    fee = Column('fee', REAL, nullable=False)
-    next_mining_time = Column('next_mining_time', Integer)
+    fee = Column('fee', REAL)
+    next_mining_time = Column('next_mining_time', REAL)
     account_id = Column('account_id', Integer, ForeignKey("accounts.id"))
 
     def __init__(self,
@@ -89,6 +90,7 @@ class Land(Base):
                  rarity,
                  lvl,
                  fee,
+                 account_id,
                  xps_ph=None,
                  bmtl_ph=None,
                  lsm_ph=None,
@@ -115,11 +117,16 @@ class Land(Base):
         self.equipment_3 = equipment_3
         self.equipment_4 = equipment_4
         self.next_mining_time = next_mining_time
+        self.account_id = account_id
+
+        logging.info(f"LAND NAME: {name} {type(name)}")
+        logging.info(f"LAND RARITY: {rarity} {type(rarity)}")
 
     def __repr__(self):
         return f"<Land(name: {self.name}, rarity: {self.rarity}, " \
                f"lvl: {self.lvl}, " \
                f"fee: {self.fee}, " \
+               f"account_id: {self.account_id}, " \
                f"xps_ph: {self.xps_ph}, " \
                f"bmtl_ph: {self.bmtl_ph}, " \
                f"mnrl_ph: {self.mnrl_ph}, " \
@@ -172,6 +179,7 @@ class Storage:
         for account in self.session.query(Account).order_by(Account.id):
             if account.name == name:
                 return account
+        return None
 
     def update_account(self,
                        src_name,
@@ -215,13 +223,15 @@ class Storage:
         self.session.add(land)
         self.session.commit()
 
-    def get_land(self, name):
+    def get_land(self, name, account_id):
         for land in self.session.query(Land).order_by(Land.id):
-            if land.name == name:
+            if land.name == name and land.account_id == account_id:
                 return land
+        return None
 
     def update_land(self,
                     src_name,
+                    account_id,
                     name=None,
                     rarity=None,
                     lvl=None,
@@ -237,9 +247,9 @@ class Storage:
                     equipment_3=None,
                     equipment_4=None,
                     next_mining_time=None):
-        old_land = self.get_land(src_name)
+        old_land = self.get_land(src_name, account_id)
 
-        self.session.query(Land).filter(Land.name == src_name).update(
+        self.session.query(Land).filter(Land.name == src_name and Land.account_id == account_id).update(
             {
                 Land.name: name if name else old_land.name,
                 Land.rarity: rarity if rarity else old_land.rarity,

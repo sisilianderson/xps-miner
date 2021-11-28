@@ -107,23 +107,26 @@ class Miner:
             logging.info(f"token_id: {token_id}\nsession_token: {session_token}")
             db.update_account(acc_name, session_token=session_token, session_id=token_id, token_upd_time=int(time.time()))
 
-        claimer = ClaimFWX(account=acc_name, config=self.main_cfg, driver=driver, db=db)
+        claimer = ClaimXPS(account=acc_name, config=self.main_cfg, driver=driver, db=db)
 
         if not db.get_account(acc_name).session_token or not db.get_account(acc_name).session_id:
             try:
-                login_with_update_token()
+                pass
+                #login_with_update_token()
             except Exception:
                 return
         else:
             if (int(time.time()) - db.get_account(acc_name).token_upd_time) > 259200:
-                login_with_update_token()
+                pass
+                #login_with_update_token()
             else:
                 try:
-                    self.token_login(token_id=db.get_account(acc_name).session_id, session_token=db.get_account(acc_name).session_token)
+                    pass
+                    #self.token_login(token_id=db.get_account(acc_name).session_id, session_token=db.get_account(acc_name).session_token)
                 except Exception:
                     return
 
-        claimer.claim_fwx(debug_mode=claim)
+        claimer.claim_xps()
 
 
 if __name__ == "__main__":
@@ -151,7 +154,7 @@ if __name__ == "__main__":
     with open(args.config) as f:
         main_cfg = json.load(f)
 
-    db = Storage(main_cfg["balance_path"], "farmers.io")
+    db = Storage(main_cfg["balance_path"], "xps.io")
 
     with open(args.accounts) as f:
         acc_cfg = json.load(f)
@@ -164,8 +167,8 @@ if __name__ == "__main__":
         for acc_name in acc_cfg:
             if not db.get_account(acc_name):
                 logging.info(f"New account {acc_name} found. Create it in the database.")
-                db.add_account(Account(name=acc_name, next_mining_time=int(time.time())))
-            if db.get_account(acc_name).next_mining_time - int(time.time()) < 300 or args.d:
+                db.add_account(Account(name=acc_name, next_mining_time=0))
+            if db.get_account(acc_name).next_mining_time < 10 or args.d:
                 logging.info(f"Start mining for account {acc_name}")
                 driver = webdriver.Chrome(options=set_extension)
                 WebDriverWait(driver, 5)
@@ -176,5 +179,5 @@ if __name__ == "__main__":
                 driver.close()
                 driver.quit()
             else:
-                logging.info(f"The next mining for {acc_name}: {db.get_account(acc_name).next_mining_time - int(time.time())} sec")
+                logging.info(f"The next mining for {acc_name}: {db.get_account(acc_name).next_mining_time} sec")
                 time.sleep(30)

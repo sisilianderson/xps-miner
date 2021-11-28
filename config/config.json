@@ -1,0 +1,9 @@
+{
+    "app": "Xps",
+    "loginPath": "https://all-access.wax.io",
+    "gamePath": [
+        "https://xpsgame.io/"
+    ],
+    "balance_path": "/opt/xpsgame/",
+    "wait_result_times": 5
+}
