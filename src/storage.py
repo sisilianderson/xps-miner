@@ -113,3 +113,34 @@ class PklStorage:
 
     def get_all(self):
         return (i for i in self.__load().items())
+
+
+class CredStorage:
+    def __load(self):
+        with open('.credstor', 'rb') as handle:
+            data = pickle.load(handle)
+        return data
+
+    def __save(self, data):
+        with open('.credstor', 'wb+') as handle:
+            pickle.dump(data, handle, protocol=pickle.HIGHEST_PROTOCOL)
+
+    def get_account(self, name):
+        if not os.path.exists('.credstor'):
+            return None
+        now_data = self.__load()
+        if name in now_data:
+            return now_data[name]
+
+    def add_account(self, account):
+        if os.path.exists('.credstor'):
+            now_data = self.__load()
+        else:
+            now_data = {}
+        now_data[account['name']] = account
+        self.__save(now_data)
+
+    def update_account(self, account):
+        now_data = self.__load()
+        now_data[account['name']].update(account)
+        self.__save(now_data)

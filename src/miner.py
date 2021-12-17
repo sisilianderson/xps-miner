@@ -2,9 +2,8 @@ import argparse
 import base64
 import json
 import logging
-import os
 import time
-from datetime import datetime
+import os
 
 from pyvirtualdisplay import Display
 from selenium import webdriver
@@ -12,8 +11,8 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.chrome.options import Options
 
-from database import Storage, Account
 from claimer import ClaimXPS
+from storage import CredStorage
 
 
 class Miner:
@@ -22,35 +21,43 @@ class Miner:
         self.acc_cfg = acc_cfg
         self.driver = driver
         self.verbose = verbose
+        self.db = CredStorage()
 
     def reddit_login(self, login, pwd):
         self.driver.get("https://www.reddit.com/login/")
         time.sleep(3)
-        ilogin = self.driver.find_element(by=By.XPATH, value='/html/body/div/main/div[1]/div/div[2]/form/fieldset[1]/input')
-        ipwd = self.driver.find_element(by=By.XPATH, value='/html/body/div/main/div[1]/div/div[2]/form/fieldset[2]/input')
+        ilogin = self.driver.find_element(by=By.XPATH,
+                                          value='/html/body/div/main/div[1]/div/div[2]/form/fieldset[1]/input')
+        ipwd = self.driver.find_element(by=By.XPATH,
+                                        value='/html/body/div/main/div[1]/div/div[2]/form/fieldset[2]/input')
 
         ilogin.send_keys(login)
         ipwd.send_keys(pwd)
 
-        lgn_btn = self.driver.find_element(by=By.XPATH, value='/html/body/div/main/div[1]/div/div[2]/form/fieldset[5]/button')
+        lgn_btn = self.driver.find_element(by=By.XPATH,
+                                           value='/html/body/div/main/div[1]/div/div[2]/form/fieldset[5]/button')
         lgn_btn.click()
 
         time.sleep(5)
         driver.get("https://all-access.wax.io")
         time.sleep(5)
-        reddit_login = self.driver.find_element(by=By.XPATH, value='/html/body/div/div/div/div/div[4]/div[1]/div[9]/button')
+        reddit_login = self.driver.find_element(by=By.XPATH,
+                                                value='/html/body/div/div/div/div/div[4]/div[1]/div[9]/button')
         reddit_login.click()
         time.sleep(5)
         try:
             allow_btn = self.driver.find_element(by=By.XPATH, value='/html/body/div[3]/div/div[2]/form/div/input[1]')
         except Exception:
-            ilogin = self.driver.find_element(by=By.XPATH, value='/html/body/div/main/div[1]/div/div[2]/form/fieldset[1]/input')
-            ipwd = self.driver.find_element(by=By.XPATH, value='/html/body/div/main/div[1]/div/div[2]/form/fieldset[2]/input')
+            ilogin = self.driver.find_element(by=By.XPATH,
+                                              value='/html/body/div/main/div[1]/div/div[2]/form/fieldset[1]/input')
+            ipwd = self.driver.find_element(by=By.XPATH,
+                                            value='/html/body/div/main/div[1]/div/div[2]/form/fieldset[2]/input')
 
             ilogin.send_keys(login)
             ipwd.send_keys(pwd)
 
-            lgn_btn = self.driver.find_element(by=By.XPATH, value='/html/body/div/main/div[1]/div/div[2]/form/fieldset[5]/button')
+            lgn_btn = self.driver.find_element(by=By.XPATH,
+                                               value='/html/body/div/main/div[1]/div/div[2]/form/fieldset[5]/button')
             lgn_btn.click()
 
             allow_btn = None
@@ -59,7 +66,8 @@ class Miner:
                 if wait_iterator > 15:
                     raise Exception
                 try:
-                    allow_btn = self.driver.find_element(by=By.XPATH, value='/html/body/div[3]/div/div[2]/form/div/input[1]')
+                    allow_btn = self.driver.find_element(by=By.XPATH,
+                                                         value='/html/body/div[3]/div/div[2]/form/div/input[1]')
                 except Exception:
                     time.sleep(1)
                 wait_iterator += 1
@@ -68,6 +76,53 @@ class Miner:
 
         time.sleep(5)
 
+        token_id = None
+        session_token = None
+        for cookie in driver.get_cookies():
+            if "wax.io" in cookie['domain'] and cookie['name'] == 'AWSALB':
+                token_id = cookie['value']
+            if "wax.io" in cookie['domain'] and cookie['name'] == 'session_token':
+                session_token = cookie['value']
+        return token_id, session_token
+
+    def mail_login(self, login, pwd):
+        driver.get("https://all-access.wax.io")
+        time.sleep(3)
+        wax_login = self.driver.find_element_by_xpath(
+            '/html/body/div/div/div/div/div[5]/div/div/div/div[1]/div[1]/input')
+        wax_pass = self.driver.find_element_by_xpath(
+            '/html/body/div/div/div/div/div[5]/div/div/div/div[1]/div[2]/input')
+
+        wax_login.send_keys(login)
+        wax_pass.send_keys(pwd)
+
+        wax_login_button = self.driver.find_element_by_xpath(
+            '/html/body/div/div/div/div/div[5]/div/div/div/div[4]/button')
+        time.sleep(1)
+        wax_login_button.click()
+
+        time.sleep(10)
+        try:
+            if self.driver.find_element_by_xpath("/html/body/div/div/section/div[2]/div/div[2]"):
+                while not os.path.exists(".mail-login-code"):
+                    time.sleep(3)
+                mail_code = ''
+                while not mail_code:
+                    with open('.mail-login-code') as f:
+                        mail_code = f.readlines()
+                    time.sleep(3)
+                input_code_line = self.driver.find_element_by_xpath("/html/body/div/div/section/div[2]/div/div[3]/form/div[1]/div/input")
+                input_code_line.send_keys(mail_code)
+                self.driver.find_element_by_xpath("/html/body/div/div/section/div[2]/div/div[3]/form/div[3]/button").click()
+        except Exception:
+            pass
+        time.sleep(5)
+        while True:
+            try:
+                self.driver.find_element_by_xpath('/html/body/div/div/section/div[2]/div/div[2]')
+            except:
+                break
+            time.sleep(5)
         token_id = None
         session_token = None
         for cookie in driver.get_cookies():
@@ -98,35 +153,49 @@ class Miner:
         self.driver.get(self.main_cfg["loginPath"])
         time.sleep(15)
 
-    def start(self, acc_name, claim=True):
+    def start(self, acc_name, rent=False):
         def login_with_update_token():
             lg = base64.b64decode(self.acc_cfg[acc_name]["login"]).decode("utf-8")
             pw = base64.b64decode(self.acc_cfg[acc_name]["pass"]).decode("utf-8")
 
-            token_id, session_token = self.reddit_login(lg, pw)
-            logging.info(f"token_id: {token_id}\nsession_token: {session_token}")
-            db.update_account(acc_name, session_token=session_token, session_id=token_id, token_upd_time=int(time.time()))
+            if self.acc_cfg[acc_name]["auth"] == "reddit":
+                logging.info("Login with reddit auth")
+                token_id, session_token = self.reddit_login(lg, pw)
+            else:
+                logging.info("Login with mail auth")
+                token_id, session_token = self.mail_login(lg, pw)
+            self.db.update_account({"name": acc_name, "session_token": session_token, "session_id": token_id, "token_upd_time": int(time.time())})
 
-        claimer = ClaimXPS(account=acc_name, config=self.main_cfg, driver=driver, db=db)
+        db_account = self.db.get_account(acc_name)
+        logging.info(f"DB_ACCOUNT: {db_account}")
 
-        if not db.get_account(acc_name).session_token or not db.get_account(acc_name).session_id:
+        if not db_account:
+            logging.info(f"Not {acc_name} in database create it")
+            self.db.add_account({"name": acc_name, "session_token": None, "session_id": None, "token_upd_time": int(time.time())})
+            db_account = self.db.get_account(acc_name)
+
+        if not db_account['session_token'] or not db_account['session_id']:
+            logging.info("Login without token")
             try:
-                pass
-                #login_with_update_token()
+                login_with_update_token()
             except Exception:
                 return
         else:
-            if (int(time.time()) - db.get_account(acc_name).token_upd_time) > 259200:
-                pass
-                #login_with_update_token()
-            else:
-                try:
-                    pass
-                    #self.token_login(token_id=db.get_account(acc_name).session_id, session_token=db.get_account(acc_name).session_token)
-                except Exception:
-                    return
+            logging.info("Login with token")
+            try:
+                self.token_login(token_id=db_account['session_id'], session_token=db_account['session_token'])
+            except Exception:
+                return
 
-        claimer.claim_xps()
+        claimer = ClaimXPS(account=acc_name, config=self.main_cfg, driver=driver, rent=rent)
+        while True:
+            #if claimer.claim_xps():
+            #    claimer.claim_stake()
+            claimer.claim_xps()
+            time.sleep(60)
+
+    def __del__(self):
+        self.driver.close()
 
 
 if __name__ == "__main__":
@@ -136,6 +205,7 @@ if __name__ == "__main__":
     parser.add_argument("--v", help="run with verbose mode", action='store_true')
     parser.add_argument("--config", help="config file")
     parser.add_argument("--accounts", help="accounts file")
+    parser.add_argument("--rent", help="if need rent claims", action='store_true')
     args = parser.parse_args()
     set_extension = Options()
     if "/" in args.accounts:
@@ -154,8 +224,6 @@ if __name__ == "__main__":
     with open(args.config) as f:
         main_cfg = json.load(f)
 
-    db = Storage(main_cfg["balance_path"], "xps.io")
-
     with open(args.accounts) as f:
         acc_cfg = json.load(f)
 
@@ -165,19 +233,10 @@ if __name__ == "__main__":
 
     while True:
         for acc_name in acc_cfg:
-            if not db.get_account(acc_name):
-                logging.info(f"New account {acc_name} found. Create it in the database.")
-                db.add_account(Account(name=acc_name, next_mining_time=0))
-            if db.get_account(acc_name).next_mining_time < 10 or args.d:
-                logging.info(f"Start mining for account {acc_name}")
-                driver = webdriver.Chrome(options=set_extension)
-                WebDriverWait(driver, 5)
-                Miner(main_cfg,
-                      acc_cfg,
-                      driver,
-                      verbose=True if args.v else False).start(acc_name, claim=False if not args.d else True)
-                driver.close()
-                driver.quit()
-            else:
-                logging.info(f"The next mining for {acc_name}: {db.get_account(acc_name).next_mining_time} sec")
-                time.sleep(30)
+            logging.info(f"Start mining for account {acc_name}")
+            driver = webdriver.Chrome(options=set_extension)
+            WebDriverWait(driver, 5)
+            Miner(main_cfg,
+                  acc_cfg,
+                  driver,
+                  verbose=True if args.v else False).start(acc_name, rent=True if args.rent else False)
